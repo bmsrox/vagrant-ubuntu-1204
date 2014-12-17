@@ -14,6 +14,7 @@ class base {
   }
 }
 
+#CONFIGURAÇÃO DE REWRITE E APACHE
 class http{
 
     define apache::loadmodule () {
@@ -35,6 +36,7 @@ class http{
     }
 }
 
+#INSTALAÇÃO DO PHP
 class php{
 
   package { "php5":
@@ -79,6 +81,7 @@ class php{
 
 }
 
+#INSTALAÇÃO DO MYSQL
 class mysql{
 
   package { "mysql-server":
@@ -91,29 +94,31 @@ class mysql{
   }
 }
 
-class phpmyadmin(){
+#INSTALAÇÃO DO PHPMYADMIN
+class phpmyadmin{
+
    package { 'phpmyadmin':
     ensure => present,
-    require => Package['php5']
+    require => Class['php']
   }
-  ->
+
   file { '/etc/phpmyadmin/config.inc.php':
     ensure   => file,
     replace  => true,
     content  => template('phpmyadmin/config.inc.php'),
   }
-  ->
+
   file { '/usr/share/phpmyadmin/config.inc.php':
     ensure => link,
     target => '/etc/phpmyadmin/config.inc.php',
   }
-  ->
+
   file { '/etc/phpmyadmin/config-db.php':
     ensure   => file,
     replace  => true,
     content  => template('phpmyadmin/config-db.php'),
   }
-  ->
+
   file { '/etc/apache2/sites-available/phpmyadmin.conf':
   ensure => link,
   target => '/etc/phpmyadmin/apache.conf',
@@ -131,21 +136,28 @@ class phpmyadmin(){
   }
 }
 
-
+#INSTALAÇÃO DO XDEBUG
 class xdebug{
+
+  exec{ 'sudo /usr/bin/pecl install xdebug -y':
+    require => Class['php']
+  }
 
   file {"/etc/php5/apache2/conf.d/xdebug.ini":
        content => template('php/xdebug.ini.erb'),
        require => Package['php5-xdebug'],
        ensure => 'present',
+       notify => Service[apache2]
     }
 }
 
+#ADD O REPOSITORIO DE INSTALAÇÃO DO NODE.JS
 class prepare {
   class { 'apt': }
   apt::ppa { 'ppa:chris-lea/node.js': }
 }
 
+#INSTALAÇÃO NODE.JS
 class nodejs{
   package {'nodejs':
     ensure => present,
@@ -153,6 +165,7 @@ class nodejs{
   }
 }
 
+#CONFIGURA OS NPMs
 class npm{
   exec{ '/usr/bin/npm install -g express-generator':
     require => Class['nodejs']
@@ -162,13 +175,42 @@ class npm{
   }
 }
 
+#INSTALAÇÃO MONGODB
+class mongodb{
+
+  exec {'import_public_key':
+    command => '/usr/bin/apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10',
+  }
+
+  file {'/etc/apt/sources.list.d/mongodb.list':
+    ensure  => 'present',
+    content => template('mongodb/mongodb.erb'),
+    require => Exec['import_public_key'],
+  }
+
+  exec {'install_mongodb':
+    command => 'sudo /usr/bin/apt-get install mongodb-org -y',
+    require => [Class['nodejs'], File['/etc/apt/sources.list.d/mongodb.list'], Class['base']],
+    tries => 3,
+    logoutput => on_failure
+  }
+
+  service {'mongod':
+    ensure  => 'running',
+    require => Exec['install_mongodb'],
+  }
+}
+
+#INSTALAÇÃO LAMP
 include base
 include mysql
 include http
 include php
-class { 'phpmyadmin':}
+include phpmyadmin
 include xdebug
 
+#INSTALAÇÃO MEAN
 include prepare
 include nodejs
 include npm
+include mongodb
