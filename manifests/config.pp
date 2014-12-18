@@ -18,17 +18,19 @@ class base {
 class http{
 
     define apache::loadmodule () {
-        exec { "/usr/sbin/a2enmod $name" :
+        exec { "sudo /usr/sbin/a2enmod $name" :
             unless => "/bin/readlink -e /etc/apache2/mods-enabled/${name}.load",
-            notify => Service[apache2]
+            notify => Service[apache2],
+            require => Package['apache2']
         }
     }
 
-    apache::loadmodule{"rewrite":}
 
     package { "apache2":
         ensure => present,
     }
+
+    apache::loadmodule{"rewrite":}
 
     service { "apache2":
         ensure => running,
@@ -95,30 +97,29 @@ class mysql{
 }
 
 #INSTALAÇÃO DO PHPMYADMIN
-class phpmyadmin{
-
+class phpmyadmin(){
    package { 'phpmyadmin':
     ensure => present,
     require => Class['php']
   }
-
+  ->
   file { '/etc/phpmyadmin/config.inc.php':
     ensure   => file,
     replace  => true,
     content  => template('phpmyadmin/config.inc.php'),
   }
-
+  ->
   file { '/usr/share/phpmyadmin/config.inc.php':
     ensure => link,
     target => '/etc/phpmyadmin/config.inc.php',
   }
-
+  ->
   file { '/etc/phpmyadmin/config-db.php':
     ensure   => file,
     replace  => true,
     content  => template('phpmyadmin/config-db.php'),
   }
-
+  ->
   file { '/etc/apache2/sites-available/phpmyadmin.conf':
   ensure => link,
   target => '/etc/phpmyadmin/apache.conf',
@@ -145,7 +146,7 @@ class xdebug{
 
   file {"/etc/php5/apache2/conf.d/xdebug.ini":
        content => template('php/xdebug.ini.erb'),
-       require => Package['php5-xdebug'],
+       require => [Class['php'], Exec['sudo /usr/bin/pecl install xdebug -y']],
        ensure => 'present',
        notify => Service[apache2]
     }
@@ -206,7 +207,7 @@ include base
 include mysql
 include http
 include php
-include phpmyadmin
+class { 'phpmyadmin':}
 include xdebug
 
 #INSTALAÇÃO MEAN
