@@ -168,12 +168,15 @@ class nodejs{
 
 #CONFIGURA OS NPMs
 class npm{
+
   exec{ '/usr/bin/npm install -g express-generator':
     require => Class['nodejs']
   }
-    exec{ '/usr/bin/npm install -g nodemon':
+
+  exec{ '/usr/bin/npm install -g nodemon':
     require => Class['nodejs']
   }
+
 }
 
 #INSTALAÇÃO MONGODB
