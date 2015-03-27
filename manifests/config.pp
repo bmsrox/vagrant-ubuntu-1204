@@ -3,7 +3,8 @@ Exec { path => [ '/bin/', '/sbin/', '/usr/bin/', '/usr/sbin/'] }
 package { [
     'build-essential',
     'curl',
-    'git-core'
+    'git',
+    'subversion'
   ]:
   ensure  => 'installed'
 }
@@ -214,7 +215,7 @@ class { 'phpmyadmin':}
 include xdebug
 
 #INSTALAÇÃO MEAN
-include prepare
-include nodejs
-include npm
-include mongodb
+#include prepare
+#include nodejs
+#include npm
+#include mongodb
