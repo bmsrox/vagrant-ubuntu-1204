@@ -89,6 +89,7 @@ class mysql{
 
   package { "mysql-server":
     ensure => present,
+    require=> Class["base"]
   }
 
   service { "mysql":
